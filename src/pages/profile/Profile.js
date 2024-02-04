@@ -1,45 +1,84 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
-import Card from "../../components/card/Card";
-
+import React, { useEffect, useState } from "react";
 import "./Profile.scss";
-
+import PageMenu from "../../componets/pageMenu/PageMenu";
 import { useDispatch, useSelector } from "react-redux";
+import Card from "../../componets/card/Card";
 import {
   getUser,
-  selectUser,
   updatePhoto,
   updateUser,
 } from "../../redux/features/auth/authSlice";
-import Loader from "../../components/loader/Loader";
+import Loader from "../../componets/loader/Loader";
+import { AiOutlineCloudUpload } from "react-icons/ai";
 import { toast } from "react-toastify";
 import { shortenText } from "../../utils";
-import PageMenu from "../../components/pageMenu/PageMenu";
-import { AiOutlineCloudUpload } from "react-icons/ai";
 
-const cloud_name = process.env.REACT_APP_CLOUD_NAME;
-const upload_preset = process.env.REACT_APP_UPLOAD_PRESET;
+const cloud_name = "jaykishan";
+const upload_preset = "lrryt94s";
+const url = "https://api.cloudinary.com/v1_1/jaykishan/image/upload";
 
 const Profile = () => {
-  // useRedirectLoggedOutUser("/login");
-
-  const dispatch = useDispatch();
-  const { isLoading, isLoggedIn, isSuccess, message, user } = useSelector(
-    (state) => state.auth
-  );
+  const { isLoading, user } = useSelector((state) => state.auth);
   const initialState = {
     name: user?.name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     role: user?.role || "",
-    address: user?.address || {},
+    photo: user?.photo || "",
+    address: {
+      address: user?.address?.address || "",
+      state: user?.address?.state || "",
+      country: user?.address?.country || "",
+    },
   };
   const [profile, setProfile] = useState(initialState);
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const dispatch = useDispatch();
 
+  useEffect(() => {
+    if (user === null) {
+      dispatch(getUser());
+    }
+  }, [dispatch, user]);
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user?.name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        role: user?.role || "",
+        photo: user?.photo || "",
+        address: {
+          address: user?.address?.address || "",
+          state: user?.address?.state || "",
+          country: user?.address?.country || "",
+        },
+      });
+    }
+  }, [dispatch, user]);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfile({ ...profile, [name]: value });
+  };
   const handleImageChange = (e) => {
     setProfileImage(e.target.files[0]);
     setImagePreview(URL.createObjectURL(e.target.files[0]));
+  };
+
+  const saveProfile = async (e) => {
+    e.preventDefault();
+    const userData = {
+      name: profile.name,
+      phone: profile.phone,
+      address: {
+        address: profile.address,
+        state: profile.state,
+        country: profile.country,
+      },
+    };
+    //console.log(userData);
+    await dispatch(updateUser(userData));
   };
 
   const savePhoto = async (e) => {
@@ -57,97 +96,50 @@ const Profile = () => {
         image.append("cloud_name", cloud_name);
         image.append("upload_preset", upload_preset);
 
-        // Save image to Cloudinary
-        const response = await fetch(
-          "https://api.cloudinary.com/v1_1/zinotrust/image/upload",
-          { method: "post", body: image }
-        );
+        //save image to cloudinary
+        const response = await fetch(url, { method: "POST", body: image });
         const imgData = await response.json();
-        console.log(imgData);
+        //console.log(imgData);
         imageURL = imgData.url.toString();
       }
-
-      // Save photo to MongoDB
+      //save  imgae mongoDB
       const userData = {
         photo: profileImage ? imageURL : profile.photo,
       };
-
-      dispatch(updatePhoto(userData));
+      await dispatch(updatePhoto(userData));
       setImagePreview(null);
     } catch (error) {
       toast.error(error.message);
     }
   };
 
-  useEffect(() => {
-    if (user === null) {
-      dispatch(getUser());
-    }
-  }, [dispatch, user]);
-  // console.log(user);
-  useEffect(() => {
-    if (user) {
-      setProfile({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        role: user.role || "",
-        address: user.address || {},
-      });
-    }
-  }, [user]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
-  };
-
-  const saveProfile = async (e) => {
-    e.preventDefault();
-    try {
-      const userData = {
-        name: profile.name,
-        phone: profile.phone,
-        address: {
-          address: profile.address,
-          state: profile.state,
-          country: profile.country,
-        },
-      };
-      console.log(userData);
-
-      dispatch(updateUser(userData));
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-  console.log(profile);
   return (
     <>
       <section>
         {isLoading && <Loader />}
         <div className="container">
           <PageMenu />
+
           <h2>Profile</h2>
           <div className="--flex-start profile">
             <Card cardClass={"card"}>
-              {!isLoading && user && (
+              {!isLoading && (
                 <>
                   <div className="profile-photo">
                     <div>
                       <img
                         src={imagePreview === null ? user?.photo : imagePreview}
-                        alt="Profileimg"
+                        alt="profile"
                       />
-                      <h3>Role: {profile.role}</h3>
+                      <h3>Role : {profile.role}</h3>
                       {imagePreview !== null && (
                         <div className="--center-all">
                           <button
                             className="--btn --btn-secondary"
                             onClick={savePhoto}
                           >
-                            <AiOutlineCloudUpload size={18} /> &nbsp; Upload
-                            Photo
+                            <AiOutlineCloudUpload size={18} />
+                            Upload Photo
                           </button>
                         </div>
                       )}
@@ -170,6 +162,7 @@ const Profile = () => {
                         name="name"
                         value={profile?.name}
                         onChange={handleInputChange}
+                        required
                       />
                     </p>
                     <p>
@@ -189,6 +182,7 @@ const Profile = () => {
                         name="phone"
                         value={profile?.phone}
                         onChange={handleInputChange}
+                        required
                       />
                     </p>
                     <p>
@@ -198,6 +192,7 @@ const Profile = () => {
                         name="address"
                         value={profile?.address?.address}
                         onChange={handleInputChange}
+                        required
                       />
                     </p>
                     <p>
@@ -207,6 +202,7 @@ const Profile = () => {
                         name="state"
                         value={profile?.address?.state}
                         onChange={handleInputChange}
+                        required
                       />
                     </p>
                     <p>
@@ -216,6 +212,7 @@ const Profile = () => {
                         name="country"
                         value={profile?.address?.country}
                         onChange={handleInputChange}
+                        required
                       />
                     </p>
                     <button className="--btn --btn-primary --btn-block">
@@ -233,7 +230,7 @@ const Profile = () => {
 };
 
 export const UserName = () => {
-  const user = useSelector(selectUser);
+  const { user } = useSelector((state) => state.auth);
 
   const username = user?.name || "...";
 

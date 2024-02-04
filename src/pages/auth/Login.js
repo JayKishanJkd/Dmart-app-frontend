@@ -1,64 +1,47 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "./auth.module.scss";
 import loginImg from "../../assets/login.png";
+//import Card from "../../componets/cart/Cart";
 import { Link, useNavigate } from "react-router-dom";
-import Card from "../../components/card/Card";
+import { validateEmail } from "../../utils";
 import { toast } from "react-toastify";
-import Loader from "../../components/loader/Loader";
+import Loader from "../../componets/loader/Loader";
 import { useDispatch, useSelector } from "react-redux";
 import { RESET_AUTH, login } from "../../redux/features/auth/authSlice";
-import { validateEmail } from "../../redux/features/auth/authService";
-import { useSearchParams } from "react-router-dom";
-import { getCartDB, saveCartDB } from "../../redux/features/product/cartSlice";
+import Card from "../../componets/card/Card";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { isLoggedIn, isLoading, isSuccess } = useSelector(
-    (state) => state.auth
-  );
-  const [urlParams] = useSearchParams();
-  console.log(urlParams.get("redirect"));
-  const redirect = urlParams.get("redirect");
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isLoading, isLoggedIn, isSuccess } = useSelector(
+    (state) => state.auth
+  );
 
   const loginUser = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      return toast.error("All fields are required");
+      return toast.error("All feild are required");
     }
 
     if (!validateEmail(email)) {
-      return toast.error("Please enter a valid email");
+      return toast.error("Please neter a valid email");
     }
+
     const userData = {
       email,
       password,
     };
-    // console.log(userData);
+    console.log(userData);
     await dispatch(login(userData));
   };
-
   useEffect(() => {
-    if (isLoggedIn && isSuccess) {
-      if (redirect === "cart") {
-        dispatch(
-          saveCartDB({
-            cartItems: JSON.parse(localStorage.getItem("cartItems")),
-          })
-        );
-        return navigate("/cart");
-      }
-      dispatch(getCartDB());
-      // navigate("/");
-      // window.location.reload();
+    if (isSuccess && isLoggedIn) {
+      navigate("/");
     }
-
     dispatch(RESET_AUTH());
-  }, [isSuccess, isLoggedIn, navigate, dispatch, redirect]);
-
+  }, [isSuccess, isLoggedIn, dispatch, navigate]);
   return (
     <>
       {isLoading && <Loader />}
@@ -66,11 +49,9 @@ const Login = () => {
         <div className={styles.img}>
           <img src={loginImg} alt="Login" width="400" />
         </div>
-
         <Card>
           <div className={styles.form}>
             <h2>Login</h2>
-
             <form onSubmit={loginUser}>
               <input
                 type="text"
@@ -86,11 +67,14 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <button type="submit" className="--btn --btn-primary --btn-block">
+              <button
+                type="submit"
+                className="--btn-block"
+                style={{ backgroundColor: "blue", color: "#fff" }}
+              >
                 Login
               </button>
             </form>
-
             <span className={styles.register}>
               <p>Don't have an account?</p>
               <Link to="/register">Register</Link>
